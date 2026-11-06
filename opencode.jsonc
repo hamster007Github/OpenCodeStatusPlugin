@@ -1,0 +1,114 @@
+{
+  // Editor validation and autocomplete for OpenCode V2.
+  "$schema": "https://opencode.ai/config.json",
+
+  // The plugin is loaded from the **global** config, which is also what makes its GUI reach every
+  // window. Do not list it here as well: the same location would load two instances with the same
+  // plugin id and collide on commands, panel keys, stored keys and the RPC id.
+  // "plugins": [{ "package": "./", "options": { "services": ["go"] } }],
+
+  // Least-privilege policy. Rules are ordered; the last matching rule wins.
+  "permissions": [
+    { "action": "read", "resource": "*", "effect": "allow" },
+    { "action": "glob", "resource": "*", "effect": "allow" },
+    { "action": "grep", "resource": "*", "effect": "allow" },
+
+    // The project may change its own files: the source, the package files and its own rules.
+    { "action": "edit", "resource": "*", "effect": "allow" },
+
+    // The status endpoint is public and read-only, and the V2 docs are the reference.
+    { "action": "webfetch", "resource": "*", "effect": "allow" },
+    { "action": "websearch", "resource": "*", "effect": "allow" },
+
+    // Secrets are never read. The broad read allowance above beats the base policy's `.env`
+    // ask, so the deny has to be stated here; `.env.example` stays readable below.
+    { "action": "read", "resource": "*.env", "effect": "deny" },
+    { "action": "read", "resource": "*.env.*", "effect": "deny" },
+    { "action": "read", "resource": "*/.ssh/*", "effect": "deny" },
+    { "action": "read", "resource": "*/.aws/*", "effect": "deny" },
+    { "action": "read", "resource": "*/.config/gh/hosts.yml*", "effect": "deny" },
+    { "action": "read", "resource": "*GitHub CLI/hosts.yml*", "effect": "deny" },
+    { "action": "read", "resource": "*.env.example", "effect": "allow" },
+
+    // No scraping: the status page's HTML is denied and only the JSON snapshot stays fetchable.
+    // The allow after the deny re-opens the one path this project is allowed to read.
+    { "action": "webfetch", "resource": "https://status.opencode.ai", "effect": "deny" },
+    { "action": "webfetch", "resource": "https://status.opencode.ai/*", "effect": "deny" },
+    { "action": "webfetch", "resource": "https://status.opencode.ai/api/status*", "effect": "allow" },
+
+    // The build/test loop runs unattended; everything else asks. A pattern ending in " *"
+    // also matches the command without arguments.
+    { "action": "shell", "resource": "*", "effect": "ask" },
+    { "action": "shell", "resource": "bun --version", "effect": "allow" },
+    { "action": "shell", "resource": "bun install", "effect": "allow" },
+    { "action": "shell", "resource": "bun install --frozen-lockfile", "effect": "allow" },
+    { "action": "shell", "resource": "bun run typecheck", "effect": "allow" },
+    { "action": "shell", "resource": "bun test *", "effect": "allow" },
+    { "action": "shell", "resource": "bun outdated", "effect": "allow" },
+    { "action": "shell", "resource": "bun run build", "effect": "allow" },
+    { "action": "shell", "resource": "bun run dev", "effect": "allow" },
+    { "action": "shell", "resource": "git status *", "effect": "allow" },
+    { "action": "shell", "resource": "git diff *", "effect": "allow" },
+    { "action": "shell", "resource": "git log *", "effect": "allow" },
+    { "action": "shell", "resource": "git show *", "effect": "allow" },
+    { "action": "shell", "resource": "git rev-parse *", "effect": "allow" },
+    { "action": "shell", "resource": "git ls-files *", "effect": "allow" },
+    { "action": "shell", "resource": "git remote -v", "effect": "allow" },
+    { "action": "shell", "resource": "git remote show *", "effect": "allow" },
+    { "action": "shell", "resource": "git remote get-url *", "effect": "allow" },
+
+    // Inspecting the running server is read-only, and the plugin's own RPC only reads its cache.
+    // `service restart` stays ask: it drops every connected client.
+    { "action": "shell", "resource": "opencode --version", "effect": "allow" },
+    { "action": "shell", "resource": "opencode service status", "effect": "allow" },
+    { "action": "shell", "resource": "opencode api get *", "effect": "allow" },
+    { "action": "shell", "resource": "opencode api post /api/rpc/provider-status/*", "effect": "allow" },
+    { "action": "shell", "resource": "opencode api --standalone get *", "effect": "allow" },
+    { "action": "shell", "resource": "opencode api --standalone post /api/rpc/provider-status/*", "effect": "allow" },
+
+    // Publishing is a decision, not a step in the loop. Remote git is denied as a policy below.
+    { "action": "shell", "resource": "bun publish *", "effect": "deny" },
+    { "action": "shell", "resource": "bun pm publish *", "effect": "deny" },
+    { "action": "shell", "resource": "npm publish *", "effect": "deny" },
+
+    // The plugin is developed in this folder. An approval here is durable, so this is a prompt,
+    // not a wall: never treat it as permission to edit outside the project.
+    { "action": "external_directory", "resource": "*", "effect": "ask" },
+
+    // The server's own artifacts are inputs to development: logs to read when a plugin fails,
+    // and the files this harness writes large tool and shell output to. Read-only, and the
+    // credential store beside them stays denied.
+    { "action": "external_directory", "resource": "~/.local/share/opencode/log/*", "effect": "allow" },
+    { "action": "external_directory", "resource": "~/.local/share/opencode/tool-output/*", "effect": "allow" },
+    { "action": "external_directory", "resource": "~/.local/share/opencode/shell/*", "effect": "allow" },
+    { "action": "read", "resource": "~/.local/share/opencode/auth.json", "effect": "deny" },
+    { "action": "read", "resource": "~/.local/share/opencode/*/auth.json", "effect": "deny" },
+    { "action": "edit", "resource": "~/.local/share/opencode/*", "effect": "deny" }
+
+    // `~/.claude` and `CLAUDE.md` are denied by the global configuration for every project, so
+    // they are deliberately not repeated here.
+  ],
+
+  // Policies cannot be widened by "Allow always" or by a later agent rule. They are the last word,
+  // which is why the remote-git constraint lives here and not only in the permission list.
+  "policies": [
+    { "action": "tool.use", "resource": "shell:git push *", "effect": "deny" },
+    { "action": "tool.use", "resource": "shell:git * push *", "effect": "deny" },
+    { "action": "tool.use", "resource": "shell:git remote add *", "effect": "deny" },
+    { "action": "tool.use", "resource": "shell:git remote set-url *", "effect": "deny" },
+    { "action": "tool.use", "resource": "shell:git remote remove *", "effect": "deny" },
+    { "action": "tool.use", "resource": "shell:git remote rm *", "effect": "deny" },
+    { "action": "tool.use", "resource": "shell:git remote rename *", "effect": "deny" },
+    { "action": "tool.use", "resource": "shell:gh repo *", "effect": "deny" },
+    { "action": "tool.use", "resource": "shell:gh pr *", "effect": "deny" },
+    { "action": "tool.use", "resource": "shell:gh release *", "effect": "deny" },
+    { "action": "tool.use", "resource": "shell:gh workflow *", "effect": "deny" },
+    { "action": "tool.use", "resource": "shell:gh api *", "effect": "deny" },
+    { "action": "tool.use", "resource": "shell:gh issue *", "effect": "deny" },
+    { "action": "tool.use", "resource": "shell:gh label *", "effect": "deny" },
+    { "action": "tool.use", "resource": "shell:gh secret *", "effect": "deny" },
+    { "action": "tool.use", "resource": "shell:gh variable *", "effect": "deny" },
+    { "action": "tool.use", "resource": "shell:gh ruleset *", "effect": "deny" },
+    { "action": "tool.use", "resource": "shell:gh gist *", "effect": "deny" }
+  ]
+}

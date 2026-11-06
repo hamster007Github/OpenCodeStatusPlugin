@@ -1,0 +1,84 @@
+name: Bug report
+description: Something the plugin shows or does is wrong.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not paste API keys, tokens, session content or logs with credentials.
+        The plugin needs none of them, and an issue is public.
+
+  - type: input
+    id: opencode
+    attributes:
+      label: OpenCode version
+      description: Settings → About, or `opencode --version`.
+      placeholder: 2.2.5
+    validations:
+      required: true
+
+  - type: input
+    id: plugin
+    attributes:
+      label: Plugin version
+      description: The version in your `opencode.json(c)` entry or in `package.json`.
+      placeholder: 0.1.0
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - Windows
+        - macOS
+        - Linux
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What should happen
+      description: Which state did you expect the pill and the panel to show?
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: What happens instead
+      description: Copy the pill label, for example "Go degraded · stale", and what the panel says.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Add the plugin to the global opencode.jsonc
+        2. Open a session
+        3. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: status
+    attributes:
+      label: What the status feed carried
+      description: >-
+        Optional. The response of https://status.opencode.ai/api/status around the time of the
+        report. Remove anything you do not want public; the feed itself carries no account data.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before opening
+      options:
+        - label: I read the README and searched the existing issues.
+          required: true
+        - label: The report contains no credentials or private session content.
+          required: true

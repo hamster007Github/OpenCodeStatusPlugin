@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: OpenCode status page
+    url: https://status.opencode.ai
+    about: The live status of OpenCode Go, the hosted services and their incidents.
+  - name: OpenCode documentation
+    url: https://opencode.ai/v2/docs/
+    about: Configuration, plugins and troubleshooting for OpenCode itself.

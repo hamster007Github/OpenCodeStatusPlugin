@@ -1,0 +1,50 @@
+name: Feature request
+description: A fact the plugin should show, or a surface it should change.
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The pill stays one line and the panel carries the detail. A new field has to replace
+        something or answer a question the current surfaces cannot.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: The decision this helps with
+      description: Which question about Go or another service can you not answer today?
+    validations:
+      required: true
+
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Surface
+      options:
+        - Composer pill
+        - Side panel
+        - Settings page
+        - Command or shortcut
+        - Server part or RPC
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What it should show or do
+      description: Keep it small. Say what it replaces if the surface is already full.
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives
+      description: What you do today instead, for example the status page in a browser.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before opening
+      options:
+        - label: This needs no scraping, no credentials and no second data source.
+          required: true

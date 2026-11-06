@@ -1,0 +1,85 @@
+name: Publish
+
+# Manual only: Actions → Publish → Run workflow. Nothing here runs on push, tag or pull request.
+#
+# Authentication is npm Trusted Publishing (OIDC): configure this repository and this workflow file as
+# a trusted publisher on npmjs.com. There is no long-lived token and no 2FA bypass. The first publish
+# of a brand-new package name must be done locally with your 2FA code, because the trusted publisher
+# is configured on the package page.
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Build, pack and smoke-test without publishing
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  # The OIDC token npm exchanges for a short-lived publish credential, and provenance signing.
+  id-token: write
+
+jobs:
+  publish:
+    name: Pack and publish to npm
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Use an npm that supports trusted publishing
+        run: |
+          npm install --global npm@latest
+          npm --version
+
+      - name: Install
+        run: bun install --frozen-lockfile
+
+      - name: Typecheck
+        run: bun run typecheck
+
+      - name: Build the GUI bundle
+        run: bun run build
+
+      - name: Test
+        run: bun test
+
+      - name: Refuse a version that is already on npm
+        run: |
+          name=$(node -p "require('./package.json').name")
+          version=$(node -p "require('./package.json').version")
+          if npm view "$name@$version" version >/dev/null 2>&1; then
+            echo "::error::$name@$version is already on npm; bump the version in package.json first."
+            exit 1
+          fi
+          echo "Publishing $name@$version"
+
+      - name: Inspect the tarball
+        run: npm pack --dry-run
+
+      - name: Smoke-test the installed tarball
+        run: |
+          tarball=$(npm pack --silent)
+          where="$RUNNER_TEMP/pack-test"
+          mkdir -p "$where"
+          cd "$where"
+          npm init -y >/dev/null
+          npm install --ignore-scripts "$GITHUB_WORKSPACE/$tarball"
+          bun -e "const plugin = require('opencode-status-plugin'); if (!plugin.default?.setup) process.exit(1); console.log('server part:', plugin.default.id)"
+          bun -e "const gui = require.resolve('opencode-status-plugin/gui-experimental'); if (!gui.endsWith('gui-experimental.cjs')) process.exit(1); console.log('gui part:', gui)"
+          bun -e "const rpc = require('opencode-status-plugin/rpc'); if (rpc.ProviderStatus.id !== 'provider-status') process.exit(1); console.log('rpc part:', rpc.ProviderStatus.id)"
+
+      - name: Publish with provenance
+        if: inputs.dry_run == false
+        run: npm publish --provenance --access public
+
+      - name: Dry run
+        if: inputs.dry_run == true
+        run: echo "Dry run: the tarball is built, installed and inspected; nothing was published."
