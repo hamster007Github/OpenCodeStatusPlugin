@@ -10,7 +10,7 @@ import {
 } from "../status/options"
 import { isStale, scopeStatus } from "../status/select"
 import type { Incident, ModelHealth, ScopedService, Speed } from "../status/types"
-import { reasonWord, serviceLabel, stateWord } from "./copy"
+import { reasonWord, serviceLabel, stateWord } from "../copy"
 import type { StatusController } from "./data"
 import type { WindowContext } from "./definition"
 import { readPrefs } from "./prefs"
@@ -34,8 +34,8 @@ function age(from: number | null): string | null {
 }
 
 function modelDetail(ctx: WindowContext, model: ModelHealth, withSpeed: boolean): string {
-  const parts = [stateWord(ctx, model.state)]
-  if (model.reason !== "none") parts.push(reasonWord(ctx, model.reason))
+  const parts = [stateWord(ctx.t, model.state)]
+  if (model.reason !== "none") parts.push(reasonWord(ctx.t, model.reason))
 
   const speed = speedText(model.speed, withSpeed)
   if (speed) parts.push(speed)
@@ -44,8 +44,8 @@ function modelDetail(ctx: WindowContext, model: ModelHealth, withSpeed: boolean)
 }
 
 function incidentDetail(ctx: WindowContext, incident: Incident): string {
-  const parts = [stateWord(ctx, incident.state)]
-  if (incident.reason !== "none") parts.push(reasonWord(ctx, incident.reason))
+  const parts = [stateWord(ctx.t, incident.state)]
+  if (incident.reason !== "none") parts.push(reasonWord(ctx.t, incident.reason))
 
   const running = age(incident.startedAt)
   if (running) parts.push(`${ctx.t("panel.for")} ${running}`)
@@ -57,8 +57,8 @@ function ServiceBlock(props: { ctx: WindowContext; service: ScopedService; withS
   const ctx = props.ctx
 
   const detail = () => {
-    const parts = [stateWord(ctx, props.service.state)]
-    if (props.service.reason !== "none") parts.push(reasonWord(ctx, props.service.reason))
+    const parts = [stateWord(ctx.t, props.service.state)]
+    if (props.service.reason !== "none") parts.push(reasonWord(ctx.t, props.service.reason))
 
     const since = age(props.service.since)
     if (since) parts.push(`${ctx.t("panel.since")} ${since}`)
@@ -73,7 +73,7 @@ function ServiceBlock(props: { ctx: WindowContext; service: ScopedService; withS
     <div class="ocs-row">
       <span class="ocs-dot" data-state={props.service.state} />
       <div class="ocs-main">
-        <div class="ocs-name">{serviceLabel(ctx, props.service.service)}</div>
+        <div class="ocs-name">{serviceLabel(ctx.t, props.service.service)}</div>
         <div class="ocs-detail">{detail()}</div>
         <Show when={props.service.models.length > 0}>
           <div class="ocs-models">
@@ -100,7 +100,7 @@ function IncidentCard(props: { ctx: WindowContext; incident: Incident }) {
     <div class="ocs-card">
       <div class="ocs-row">
         <span class="ocs-dot" data-state={props.incident.state} />
-        <span class="ocs-name">{serviceLabel(ctx, props.incident.service)}</span>
+        <span class="ocs-name">{serviceLabel(ctx.t, props.incident.service)}</span>
       </div>
       <div class="ocs-detail">{incidentDetail(ctx, props.incident)}</div>
       <Show when={props.incident.models.length > 0}>
@@ -186,7 +186,7 @@ export function StatusPanel(props: { ctx: WindowContext; status: StatusControlle
     <div class="ocs-panel">
       <header class="ocs-head">
         <span class="ocs-dot" data-state={state()} />
-        <span class="ocs-state">{stateWord(ctx, state())}</span>
+        <span class="ocs-state">{stateWord(ctx.t, state())}</span>
         <span class="ocs-age">{checked()}</span>
         <span class="ocs-spacer" />
         <ui.Button variant="ghost" size="small" onClick={() => ctx.system.openExternal(STATUS_PAGE_URL)}>

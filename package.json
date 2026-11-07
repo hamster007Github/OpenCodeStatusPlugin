@@ -1,7 +1,7 @@
 {
   "name": "opencode-status-plugin",
-  "version": "0.0.0",
-  "description": "OpenCode Go provider health inside OpenCode Desktop: a composer pill, a side panel and a settings page.",
+  "version": "0.1.0",
+  "description": "OpenCode Go provider health inside OpenCode Desktop and the CLI: a composer pill, a side panel, a settings page and a terminal footer.",
   "type": "module",
   "license": "MIT",
   "author": "OpenCodeStatusPlugin contributors",
@@ -18,11 +18,13 @@
     "opencode-plugin",
     "opencode-go",
     "status",
-    "health"
+    "health",
+    "tui"
   ],
   "exports": {
     ".": "./src/index.ts",
     "./rpc": "./src/rpc.ts",
+    "./tui": "./src/tui.tsx",
     "./gui-experimental": "./dist/gui-experimental.cjs"
   },
   "files": [
@@ -43,7 +45,14 @@
   "dependencies": {
     "@opencode/plugin": "2.2.5"
   },
+  "peerDependencies": {
+    "@opentui/core": ">=0.8.0",
+    "@opentui/solid": ">=0.8.0",
+    "solid-js": ">=1.9.0"
+  },
   "devDependencies": {
+    "@opentui/core": "^0.8.3",
+    "@opentui/solid": "^0.8.3",
     "@types/bun": "^1.4.4",
     "effect": "4.0.6",
     "solid-js": "^1.9.18",

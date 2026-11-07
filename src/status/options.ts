@@ -75,6 +75,9 @@ export function resolveOptions(raw: unknown): ResolvedOptions {
     intervalSeconds,
     staleAfterSeconds,
     notify: notify(input.notify) ?? "off",
+    tuiHomeFooter: input.tuiHomeFooter !== false,
+    tuiPromptFooter: input.tuiPromptFooter !== false,
+    tuiNotify: notify(input.tuiNotify) ?? "off",
     apiUrl: endpoint(input.apiUrl) ?? DEFAULT_API_URL,
     lights: mergeLights(parseLights(input.lights)),
   }

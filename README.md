@@ -16,6 +16,7 @@ detail, and a settings page that decides what is shown.
 | Composer pill | One line: `OpenCode [scope] mark` — `OpenCode [Go] 🟢` operational, `OpenCode [Go] 🟡` degraded, `OpenCode [Go] 🔴` outage, `OpenCode [Go] ❔️` unknown or stale. Its menu lists the watched services with their state and reason, and opens the panel. |
 | Side panel | Per-service and per-model state with the reason (`errors`, `upstream`, `latency`, `availability`), the time since the current state began, median time to first token and tokens per second, ongoing incidents with their latest update, the 7-day history strip, the age of the last check, and a stale warning. |
 | Settings page | Which services and models are watched, whether speed, incidents and history are shown, and when the plugin may notify. |
+| CLI/TUI | Footer mark `[Go] 🟢` — the desktop pill without the `OpenCode` prefix, because terminal width is limited — in both the home footer and the session prompt footer (each can be turned off) and `/provider-status`, which lists the watched services and drills into their models. Incidents are one more entry. |
 | Command | `provider-status.open` opens the panel from the command palette. The side panel's **+** menu lists it too. |
 
 The pill is one line: the product, the watched scope and a mark. It never carries a number, a unit
@@ -74,6 +75,8 @@ one per window. The status page's HTML is never parsed.
 ## Requirements
 
 - OpenCode Desktop 2.x. The GUI plugin API is experimental and may change between releases.
+- OpenCode 2.x for the CLI/TUI part. The same global plugin entry loads it; no separate `cli.json`
+  entry is needed because the package has a server part.
 - This build was made against `@opencode/plugin` **2.2.5**.
 - The plugin listed in the **global** `opencode.jsonc`: the desktop app reads plugins only from the
   server it runs, and a plugin's GUI reaches every window only when it is configured globally.
@@ -113,6 +116,9 @@ opencode plugin add opencode-status-plugin
 }
 ```
 
+The CLI reads the same global entry. No `cli.json` change is needed for this package because it has a
+server part; `cli.json` is for packages with only a TUI part.
+
 For local development, point your **global** config at this folder:
 
 ```jsonc
@@ -139,6 +145,9 @@ Options are passed in the plugin entry. OpenCode reloads the plugin when they ch
 | `intervalSeconds` | `60` | Poll interval, clamped to 30–3600 seconds. The origin caches for 15 seconds, so faster buys nothing. |
 | `staleAfterSeconds` | `180` | Age at which a snapshot is stale, clamped to at least the poll interval. |
 | `notify` | `"off"` | `"off"`, `"degraded"` or `"outage"`: a system notification when the watched scope reaches that state. |
+| `tuiHomeFooter` | `true` | Show the status mark in the CLI home footer. |
+| `tuiPromptFooter` | `true` | Show it in the session prompt footer as well. |
+| `tuiNotify` | `"off"` | `"off"`, `"degraded"` or `"outage"`: a terminal notification for the watched scope. Separate from `notify`. |
 | `apiUrl` | the official endpoint | Override for testing against a mirror. HTTPS only, or plain HTTP on `localhost`/`127.0.0.1`. |
 | `lights` | `{"operational":"🟢","degraded":"🟡","outage":"🔴","unknown":"❔️","stale":"❔️"}` | The mark the pill shows for each state. Any text or symbol works; `stale` covers old data. |
 
@@ -152,6 +161,8 @@ Options are passed in the plugin entry. OpenCode reloads the plugin when they ch
         "models": ["deepseek-v4.1-flash", "glm-5.3-flash"],
         "showSpeed": true,
         "notify": "outage",
+        "tuiPromptFooter": true,
+        "tuiNotify": "degraded",
         "lights": { "degraded": "WARN", "outage": "DOWN" }
       }
     }
@@ -167,6 +178,15 @@ stay watched.
 Notifications are opt-in. They are limited to the watched scope, and the app deduplicates them by
 event id, so several open windows notify once.
 
+The CLI reads the plugin options only. Its footer placement and notification level are not part of
+the desktop settings store; set `tuiHomeFooter`, `tuiPromptFooter` and `tuiNotify` in the plugin
+entry. The CLI copy is English-only in this version.
+
+The CLI has two footer slots: `home.footer.status` on the start screen, and `prompt.footer.status`
+inside a session. If OpenCode restores a session on launch, you are not on the home screen; close
+its tab (`Ctrl+X`, then `W`) to get back to home. Both slots show the same `[Go] 🟢` mark once the
+first status read has answered.
+
 ## How it works
 
 ```text
@@ -175,16 +195,20 @@ status.opencode.ai/api/status
         ▼
    RPC `provider-status`: snapshot, refresh, changed
         │
-        ▼
-GUI (window)  ──  composer pill, side panel, settings page, command
+        ├── GUI (window)   ──  composer pill, side panel, settings page, command
+        └── TUI (terminal) ──  footer mark, /provider-status service and model list
 ```
 
 - `src/index.ts` — server part: the poller, the last-good cache, the RPC registration and the
   `changed` event.
 - `src/rpc.ts` — the RPC contract (`opencode-status-plugin/rpc`), shared by both sides.
 - `src/gui.tsx` — the `./gui-experimental` entry.
-- `src/gui/` — window setup, pill, panel, settings page, store, copy and the panel styles.
-- `src/status/` — the status domain: types, fetch, parsing, watched-scope selectors, formatting.
+- `src/gui/` — window setup, pill, panel, settings page, store and the panel styles.
+- `src/tui.tsx` — the `./tui` entry.
+- `src/tui/` — CLI controller, footer mark, detail dialogs, notifications and copy.
+- `src/copy.ts` — translator-based labels shared by the GUI and the CLI.
+- `src/status/` — the status domain: types, fetch, parsing, watched-scope selectors, formatting and
+  the shared severity mark.
 
 Facts the code keeps:
 
@@ -196,10 +220,10 @@ Facts the code keeps:
 - **The payload is untrusted.** Unknown states, unknown reasons, missing fields and non-numeric
   speeds degrade to `unknown` or to no value. A response that does not look like a status document
   keeps the previous cache and marks the view stale.
-- **The window has no timer.** It reads the cache when a session is routed, on every `changed` event
-  (one per successful poll, so a window that missed a transition still catches up), and when the
-  panel is focused. A refresh button asks the server to poll; the poller coalesces a burst of
-  clicks.
+- **Neither surface has a timer.** The window reads the cache when a session is routed, on every
+  `changed` event (one per successful poll, so a window that missed a transition still catches up),
+  and when the panel is focused. The CLI reads on setup, on every `changed` event, and when its
+  refresh command runs. A refresh asks the server to poll; the poller coalesces a burst of clicks.
 - **The origin's model list is `breakdown[]`.** `models[]` exists but is empty; both are read so a
   change upstream does not blank the panel.
 
@@ -220,6 +244,9 @@ The bundle is one CommonJS file built with the `gui()` preset. Modules the app p
 `solid-js`, `@opencode/plugin/gui` and the rest — stay external, and the app's own components come
 from `ctx.ui`.
 
+The TUI part is loaded from `./src/tui.tsx`; it has no separate bundle. Run `opencode` with the
+plugin in the global config to see the footer and `/provider-status`.
+
 ### Live API check
 
 `bun run check:api` fetches the live endpoint and passes the response through the same
@@ -234,8 +261,8 @@ pull request CI: a status outage or a GitHub network problem must never block a 
 
 ## Releasing
 
-Publishing is manual. The version lives in `package.json` and is still `0.0.0`: npm accepts it as a
-first publish, but bump it before every later one, because npm refuses a duplicate version.
+Publishing is manual. The version lives in `package.json` and is `0.1.0`. Bump it before every later
+publish, because npm refuses a duplicate version.
 
 ```sh
 bun run build          # prepack also builds, so this is a check
@@ -269,11 +296,12 @@ The tarball can be installed and loaded like the published package, without publ
 bun pm pack --destination local
 mkdir -p local/pack-test && cd local/pack-test
 bun init -y
-bun add ../../opencode-status-plugin-0.0.0.tgz
+bun add ../../opencode-status-plugin-0.1.0.tgz
 
 # every export resolves from the installed copy
 bun -e "const p = require('opencode-status-plugin'); console.log(p.default.id)"
 bun -e "console.log(require.resolve('opencode-status-plugin/gui-experimental'))"
+bun -e "console.log(require.resolve('opencode-status-plugin/tui'))"
 bun -e "console.log(require('opencode-status-plugin/rpc').ProviderStatus.id)"
 ```
 
@@ -293,11 +321,12 @@ deliberately incomplete. `rpc.unavailable` means it did not load; check the serv
 load error. The GUI still needs the global config and a window, so use the panel or the pill there.
 
 The manual **Publish** workflow repeats this: it packs the tarball, installs it into a temp directory
-on the runner, and asserts that the server, RPC and GUI exports resolve before it publishes.
+on the runner, and asserts that the server, RPC, TUI and GUI exports resolve before it publishes.
 
 ## Open points
 
 - [ ] A load in OpenCode Desktop on Linux or macOS
+- [ ] A load of the TUI part in the OpenCode CLI
 
 ## Contributing
 

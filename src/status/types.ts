@@ -130,6 +130,12 @@ export interface ResolvedOptions {
   intervalSeconds: number
   staleAfterSeconds: number
   notify: NotifyLevel
+  /** CLI: show the status mark in the home footer. */
+  tuiHomeFooter: boolean
+  /** CLI: also show it in the session prompt footer. */
+  tuiPromptFooter: boolean
+  /** CLI notification level, separate from the desktop `notify`. */
+  tuiNotify: NotifyLevel
   apiUrl: string
   lights: Lights
 }

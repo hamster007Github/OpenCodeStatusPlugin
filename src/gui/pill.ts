@@ -1,10 +1,10 @@
 import { effectiveScope, resolveOptions } from "../status/options"
 import { mergeLights } from "../status/lights"
 import { isStale, scopeStatus } from "../status/select"
-import { reasonWord, scopeLabel, serviceLabel, stateWord } from "./copy"
+import { statusMark, toneOf, type Tone } from "../status/marks"
+import { reasonWord, scopeLabel, serviceLabel, stateWord } from "../copy"
 import type { StatusController } from "./data"
 import { readPrefs } from "./prefs"
-import { pillLight, toneOf, type Tone } from "./theme"
 import type { WindowContext } from "./definition"
 
 export interface PillRow {
@@ -49,20 +49,20 @@ export function buildPill(
   const stale = isStale(view, Date.now())
   const state = scoped?.state ?? "unknown"
   const brand = ctx.t("pill.brand")
-  const name = scopeLabel(ctx, scope.services)
+  const name = scopeLabel(ctx.t, scope.services)
 
   // The capsule is a scope and a round light, under the product name. The words live in the
   // accessible name and the menu heading, so the pill still says "degraded" to a screen reader.
-  const words = [brand, name, stateWord(ctx, state)]
+  const words = [brand, name, stateWord(ctx.t, state)]
   if (stale) words.push(ctx.t("state.stale"))
 
   const rows: PillRow[] = (scoped?.services ?? []).map((service) => ({
     id: service.service,
-    label: serviceLabel(ctx, service.service),
+    label: serviceLabel(ctx.t, service.service),
     detail:
       service.reason === "none"
-        ? stateWord(ctx, service.state)
-        : `${stateWord(ctx, service.state)} · ${reasonWord(ctx, service.reason)}`,
+        ? stateWord(ctx.t, service.state)
+        : `${stateWord(ctx.t, service.state)} · ${reasonWord(ctx.t, service.reason)}`,
     icon: service.state === "operational" ? "circle-check" : "status",
     tone: toneOf(service.state),
   }))
@@ -70,7 +70,7 @@ export function buildPill(
   rows.push({ id: "open", label: ctx.t("pill.open"), icon: "status", run: open })
 
   return {
-    label: `${brand} [${name}] ${pillLight(state, stale, lights)}`,
+    label: `${brand} [${name}] ${statusMark(state, stale, lights)}`,
     title: words.join(" · "),
     rows,
   }

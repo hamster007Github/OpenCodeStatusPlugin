@@ -52,9 +52,12 @@ another instance with the same id, and the desktop app reports the plugin as fai
 src/index.ts        server part: one poller, cache, RPC
 src/rpc.ts          the contract between server and windows
 src/gui.tsx         ./gui-experimental entry
-src/gui/            window setup, pill, panel, settings, store, copy
-src/status/         types, fetch, normalisation, selectors, formatting
-test/               tests for the status domain
+src/gui/            window setup, pill, panel, settings, store
+src/tui.tsx         ./tui entry
+src/tui/            CLI controller, footer mark, detail, notifications, copy
+src/copy.ts         labels shared by the GUI and the CLI
+src/status/         types, fetch, normalisation, selectors, formatting, marks
+test/               tests for the status domain and the TUI controller
 ```
 
 ## Rules that are not negotiable
@@ -80,9 +83,9 @@ Update, in the same pull request:
 ## Tests
 
 `test/` covers the status domain: parsing the payload and the normalised snapshot, the severity
-scale and pill marks (`lights`), the watched scope, stale detection, option validation and the live
-API contract validator. It also pins the project's own invariants: the permission rules in the
-configuration and the plugin's surface. Those tests need no network.
+scale and pill marks (`lights`), the watched scope, stale detection, option validation, the live
+API contract validator and the TUI controller. It also pins the project's own invariants: the
+permission rules in the configuration and the plugin's surface. Those tests need no network.
 
 The live endpoint belongs to the separate **API contract** workflow. It runs daily and on demand,
 and treats an unreachable endpoint as inconclusive; only a payload that no longer matches the

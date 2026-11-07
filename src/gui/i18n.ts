@@ -91,6 +91,8 @@ export const en: Record<string, string> = {
   "settings.checked": "Last check",
   "settings.refresh": "Check now",
   "settings.note": "These settings override the plugin options in this app.",
+  "settings.cli": "CLI",
+  "settings.cli.note": "The terminal footer and its notifications come from the plugin options (tuiHomeFooter, tuiPromptFooter, tuiNotify) in opencode.jsonc. They are not edited here.",
 }
 
 export const de: Record<string, string> = {
@@ -182,4 +184,6 @@ export const de: Record<string, string> = {
   "settings.checked": "Letzte Prüfung",
   "settings.refresh": "Jetzt prüfen",
   "settings.note": "Diese Einstellungen überschreiben die Plugin-Optionen in dieser App.",
+  "settings.cli": "CLI",
+  "settings.cli.note": "Terminal-Fußzeile und ihre Benachrichtigungen kommen aus den Plugin-Optionen (tuiHomeFooter, tuiPromptFooter, tuiNotify) in opencode.jsonc. Sie werden hier nicht bearbeitet.",
 }

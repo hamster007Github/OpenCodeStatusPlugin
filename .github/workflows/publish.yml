@@ -74,6 +74,7 @@ jobs:
           npm install --ignore-scripts "$GITHUB_WORKSPACE/$tarball"
           bun -e "const plugin = require('opencode-status-plugin'); if (!plugin.default?.setup) process.exit(1); console.log('server part:', plugin.default.id)"
           bun -e "const gui = require.resolve('opencode-status-plugin/gui-experimental'); if (!gui.endsWith('gui-experimental.cjs')) process.exit(1); console.log('gui part:', gui)"
+          bun -e "const tui = require.resolve('opencode-status-plugin/tui'); if (!tui.endsWith('tui.tsx')) process.exit(1); console.log('tui part:', tui)"
           bun -e "const rpc = require('opencode-status-plugin/rpc'); if (rpc.ProviderStatus.id !== 'provider-status') process.exit(1); console.log('rpc part:', rpc.ProviderStatus.id)"
 
       - name: Publish with provenance

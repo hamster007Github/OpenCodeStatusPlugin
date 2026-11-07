@@ -13,6 +13,9 @@ describe("resolveOptions", () => {
     expect(options.intervalSeconds).toBe(60)
     expect(options.staleAfterSeconds).toBe(180)
     expect(options.notify).toBe("off")
+    expect(options.tuiHomeFooter).toBe(true)
+    expect(options.tuiPromptFooter).toBe(true)
+    expect(options.tuiNotify).toBe("off")
     expect(options.apiUrl).toBe(DEFAULT_API_URL)
   })
 
@@ -51,6 +54,15 @@ describe("resolveOptions", () => {
   test("ignores an unknown notification level", () => {
     expect(resolveOptions({ notify: "loud" }).notify).toBe("off")
     expect(resolveOptions({ notify: "outage" }).notify).toBe("outage")
+  })
+
+  test("reads the CLI surfaces and notification level separately", () => {
+    const options = resolveOptions({ tuiHomeFooter: false, tuiPromptFooter: false, tuiNotify: "degraded" })
+
+    expect(options.tuiHomeFooter).toBe(false)
+    expect(options.tuiPromptFooter).toBe(false)
+    expect(options.tuiNotify).toBe("degraded")
+    expect(resolveOptions({ tuiNotify: "loud" }).tuiNotify).toBe("off")
   })
 })
 

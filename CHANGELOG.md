@@ -11,3 +11,8 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - A daily **API contract** workflow feeds the live status payload through the plugin's own fetch,
   parser and scope selector. It fails only on a schema change and treats an unreachable endpoint or
   a network problem as inconclusive. `bun run check:api` runs the same check locally.
+- CLI/TUI: a footer mark with the desktop pill's scope and mark but without the `OpenCode` prefix,
+  in both the home and prompt footers (`tuiHomeFooter`, `tuiPromptFooter`, both on by default), and
+  `/provider-status`, which lists the watched services and drills into their models. `tuiNotify` adds
+  opt-in terminal notifications. Both read the same server cache over RPC; the CLI copy is
+  English-only in this version.

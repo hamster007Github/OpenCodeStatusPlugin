@@ -35,6 +35,9 @@ names; this project does not restate them.
 5. **Live API contract check** (`scripts/api-contract.ts`, not shipped) — a separate scheduled tool
    that feeds the live payload through the real fetch, parser and scope selector. It reports an
    unreachable endpoint as inconclusive and fails only when the payload breaks the contract.
+6. **TUI part** (`src/tui.tsx`, the `./tui` entry) — the CLI footer mark and the `/provider-status`
+   service and model list. It is fed by the same server cache over RPC and never fetches the status
+   endpoint itself.
 
 ### Presentation decisions
 
@@ -50,7 +53,11 @@ Whoever changes what the plugin shows owns these decisions, and can defend them:
 - **How severity reads at a glance.** One colour scale used consistently; unknown and stale never
   look healthy.
 - **When the plugin may interrupt.** Notifications are opt-in, deduplicated across windows, and
-  limited to the watched scope.
+  limited to the watched scope. The CLI has its own `tuiNotify` level so the two surfaces can differ.
+- **The CLI carries the same two surfaces.** The footer mark is the pill's scope and mark without
+  the `OpenCode` prefix, so it fits a terminal; `/provider-status` is the panel. Footer placement is
+  per slot (`tuiHomeFooter`, `tuiPromptFooter`, both on by default), and the CLI reads the plugin
+  options rather than the desktop settings store.
 
 Before adding a surface or a field, say what it replaces or why the user needs it. A compact pill
 that is always right beats a dashboard that is always in the way.
@@ -86,11 +93,14 @@ never `operational`.
 - The GUI is loaded from the plugin's server part; a plugin whose server part fails to load has no
   GUI.
 - The desktop app reads plugins only from `opencode.json(c)`, and a plugin's GUI reaches every
-  window only when it is configured in the global config. The TUI reads `cli.json`.
+  window only when it is configured in the global config. The TUI loads the TUI parts of the plugins
+  its server loads; a package with only a TUI part goes in `cli.json`, which this package does not
+  need because it has a server part.
 - `./gui-experimental` must be one prebuilt CommonJS file, built with the `gui()` preset from
   `@opencode/plugin/gui/vite`.
 - The GUI id is the server part's `id`, and it prefixes commands, panel keys and stored keys. Ids in
-  the `opencode` namespace and the app's own plugin ids are reserved.
+  the `opencode` namespace and the app's own plugin ids are reserved. The TUI part declares its own
+  id (`provider-status-tui`) and namespaces its commands the same way.
 - Window `setup` runs per window and is synchronous; `main` runs once per app and may be async.
 - The status endpoint has no CORS header, so only the server part (Node) or `main` (Electron) may
   fetch it. A window reads the server's cache over RPC.
@@ -156,6 +166,8 @@ Least privilege, and nothing that the global configuration denies is re-enabled.
   CI, so an outage or a network problem never blocks a change.
 - CI verifies typecheck, tests and build on Ubuntu, Windows and macOS.
 - The plugin loads in **Settings → Extensions → Plugins**, and the pill appears in a session.
+- The TUI loads in `opencode`: the footer mark appears, `/provider-status` lists services and models,
+  and `tuiHomeFooter`, `tuiPromptFooter` and `tuiNotify` behave as configured.
 - A fetch against the live endpoint returns a snapshot whose services and models match the watched
   scope; an unreachable endpoint shows the stale or unknown state instead of an error dialog.
 - The README describes what the plugin actually does.

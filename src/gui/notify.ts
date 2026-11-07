@@ -1,7 +1,7 @@
 import { RANK, scopeStatus } from "../status/select"
 import { effectiveScope, notifyLevel, resolveOptions } from "../status/options"
 import type { StatusView } from "../status/types"
-import { serviceLabel, stateWord } from "./copy"
+import { serviceLabel, stateWord } from "../copy"
 import { readPrefs } from "./prefs"
 import type { WindowContext } from "./definition"
 
@@ -41,7 +41,7 @@ export function maybeNotify(ctx: WindowContext, view: StatusView): void {
   void ctx.attention.notify({
     id,
     title: ctx.t("plugin.title"),
-    message: `${serviceLabel(ctx, subject.service)} ${stateWord(ctx, subject.state)}`,
+    message: `${serviceLabel(ctx.t, subject.service)} ${stateWord(ctx.t, subject.state)}`,
     variant: scoped.state === "outage" ? "error" : "default",
   })
 }

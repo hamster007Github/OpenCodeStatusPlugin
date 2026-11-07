@@ -12,7 +12,7 @@ import {
   showSpeed,
 } from "../status/options"
 import type { LightKey, PrefsValue, ServiceId } from "../status/types"
-import { serviceLabel } from "./copy"
+import { serviceLabel } from "../copy"
 import type { StatusController } from "./data"
 import type { WindowContext } from "./definition"
 import { readPrefs } from "./prefs"
@@ -131,9 +131,9 @@ export function StatusSettings(props: { ctx: WindowContext; status: StatusContro
         <h3>{ctx.t("settings.scope")}</h3>
         <For each={SERVICE_IDS}>
           {(service) => (
-            <Row title={serviceLabel(ctx, service)}>
+            <Row title={serviceLabel(ctx.t, service)}>
               <ui.Switch
-                label={serviceLabel(ctx, service)}
+                label={serviceLabel(ctx.t, service)}
                 hideLabel
                 checked={scope().services.includes(service)}
                 onChange={() => toggleService(service)}
@@ -247,6 +247,11 @@ export function StatusSettings(props: { ctx: WindowContext; status: StatusContro
           </div>
         </Row>
         <p class="ocs-muted">{ctx.t("settings.note")}</p>
+      </section>
+
+      <section class="ocs-section">
+        <h3>{ctx.t("settings.cli")}</h3>
+        <p class="ocs-muted">{ctx.t("settings.cli.note")}</p>
       </section>
     </div>
   )
