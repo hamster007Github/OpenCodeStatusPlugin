@@ -86,8 +86,8 @@ app's APIs, and the GUI is a single JavaScript bundle the app loads.
 
 | Platform | Status |
 | --- | --- |
-| Windows | developed and verified here: pill, panel, settings page, live feed |
-| Linux, macOS | CI is configured to typecheck, test and build on Ubuntu; a load in the desktop app is not yet verified |
+| Windows | developed and verified here: pill, panel, settings page, live feed; CI verifies the build and tests |
+| Linux, macOS | CI verifies the build and tests on Ubuntu and macOS; a load in the desktop app is not yet verified |
 
 Notes:
 
@@ -220,6 +220,18 @@ The bundle is one CommonJS file built with the `gui()` preset. Modules the app p
 `solid-js`, `@opencode/plugin/gui` and the rest — stay external, and the app's own components come
 from `ctx.ui`.
 
+### Live API check
+
+`bun run check:api` fetches the live endpoint and passes the response through the same
+`fetchStatus` → `parsePayload` → `scopeStatus` path the server uses. It reports contract drift and
+exits:
+
+- `0` when the shape holds, or when the endpoint or the network is unreachable (inconclusive),
+- `1` only when the endpoint answers with a payload that no longer matches the contract.
+
+A scheduled **API contract** workflow runs it daily and on demand. It is deliberately separate from
+pull request CI: a status outage or a GitHub network problem must never block a change.
+
 ## Releasing
 
 Publishing is manual. The version lives in `package.json` and is still `0.0.0`: npm accepts it as a
@@ -285,7 +297,6 @@ on the runner, and asserts that the server, RPC and GUI exports resolve before i
 
 ## Open points
 
-- [ ] First green CI run
 - [ ] A load in OpenCode Desktop on Linux or macOS
 
 ## Contributing

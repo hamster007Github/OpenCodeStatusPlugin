@@ -80,9 +80,13 @@ Update, in the same pull request:
 ## Tests
 
 `test/` covers the status domain: parsing the payload and the normalised snapshot, the severity
-scale and pill marks (`lights`), the watched scope, stale detection and option validation. It also
-pins the project's own invariants: the permission rules in the configuration and the plugin's
-surface. Those tests need no network. A test that calls the live endpoint does not belong in CI.
+scale and pill marks (`lights`), the watched scope, stale detection, option validation and the live
+API contract validator. It also pins the project's own invariants: the permission rules in the
+configuration and the plugin's surface. Those tests need no network.
+
+The live endpoint belongs to the separate **API contract** workflow. It runs daily and on demand,
+and treats an unreachable endpoint as inconclusive; only a payload that no longer matches the
+contract fails. `bun run check:api` runs the same check locally.
 
 ## Commits and pull requests
 

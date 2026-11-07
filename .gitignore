@@ -27,6 +27,7 @@
 # The plugin itself: source, tests and the files its build needs.
 !/src/
 !/test/
+!/scripts/
 !/package.json
 !/bun.lock
 !/tsconfig.json

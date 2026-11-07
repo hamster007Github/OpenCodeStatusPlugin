@@ -1,0 +1,43 @@
+name: API contract
+
+# The live check is separate from pull request CI on purpose: a status outage or
+# a GitHub network problem must never block a change. An unreachable endpoint is
+# inconclusive (green); only a payload that breaks the contract fails.
+on:
+  schedule:
+    - cron: "23 5 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: api-contract
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Check the live status payload
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      # No `bun install`: the checker imports only pure domain modules.
+      - name: Check the live payload
+        run: bun run check:api
+
+      - name: Keep the payload of a contract failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-contract-report
+          path: |
+            ${{ runner.temp }}/api-contract-report.md
+            ${{ runner.temp }}/api-contract-payload.json
+          if-no-files-found: ignore
+          retention-days: 7

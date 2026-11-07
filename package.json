@@ -37,6 +37,7 @@
     "dev": "vite build --watch",
     "typecheck": "tsc --noEmit",
     "test": "bun test",
+    "check:api": "bun scripts/api-contract.ts",
     "prepack": "bun run build"
   },
   "dependencies": {

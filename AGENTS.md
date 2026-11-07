@@ -32,6 +32,9 @@ names; this project does not restate them.
    fetches the status endpoint itself.
 4. **Status domain** (`src/status/`) — types, fetch, normalisation, selectors. The rule that unknown
    is never operational lives here.
+5. **Live API contract check** (`scripts/api-contract.ts`, not shipped) — a separate scheduled tool
+   that feeds the live payload through the real fetch, parser and scope selector. It reports an
+   unreachable endpoint as inconclusive and fails only when the payload breaks the contract.
 
 ### Presentation decisions
 
@@ -148,6 +151,10 @@ Least privilege, and nothing that the global configuration denies is re-enabled.
 - `bun run typecheck` and `bun run build` pass, and the build emits one CommonJS file at
   `dist/gui-experimental.cjs`.
 - `bun test` passes; the domain tests need no network.
+- `bun run check:api` against the live endpoint is green or inconclusive; a contract failure means
+  the feed changed, and the parser or the contract needs attention. It is not part of pull request
+  CI, so an outage or a network problem never blocks a change.
+- CI verifies typecheck, tests and build on Ubuntu, Windows and macOS.
 - The plugin loads in **Settings → Extensions → Plugins**, and the pill appears in a session.
 - A fetch against the live endpoint returns a snapshot whose services and models match the watched
   scope; an unreachable endpoint shows the stale or unknown state instead of an error dialog.
