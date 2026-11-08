@@ -1,24 +1,24 @@
 # OpenCodeStatusPlugin
 
-OpenCodeStatusPlugin is a distributable OpenCode V2 plugin, published as a GitHub project. It shows
-the health of OpenCode Go and the other hosted services inside OpenCode Desktop: a compact status
-pill above the composer, a side panel with per-service and per-model detail, and a settings page
-that decides what is shown. The data comes from the official status feed, never from scraping the
-status page.
+OpenCodeStatusPlugin is a distributable OpenCode V2 plugin, published on npm as
+`opencode-status-plugin` and developed in a public GitHub repository. It shows the health of OpenCode
+Go and the other hosted services inside OpenCode Desktop: a compact status pill above the composer, a
+side panel with per-service and per-model detail, and a settings page that decides what is shown. The
+data comes from the official status feed, never from scraping the status page.
 
 ## Language
 
 Respond in English unless the user asks for another language. Code, comments, commit messages,
-issues, the README and this file are English.
+issues, the README, `docs/` and this file are English.
 
-## Working in this project
+## Scope
 
-This repository ships no project-specific agent: these instructions are the whole contract, and any
-agent or person working here follows them. For anything about OpenCode itself — plugin package
-layout, the GUI SDK, RPC, hooks, the server part — use the global `opencode` skill and the V2 docs it
-names; this project does not restate them.
+This file is the contract for anyone working here: the components, the invariants, the agent's
+permissions and how a change is verified. It does not restate OpenCode itself — for plugin package
+layout, the GUI SDK, RPC, hooks and the server part, use the global `opencode` skill and the V2 docs it
+names.
 
-### What this project builds
+### Components
 
 1. **Server part** (`src/index.ts`) — one poller per OpenCode server: fetch
    `https://status.opencode.ai/api/status`, validate, normalise, cache the last good snapshot with
@@ -39,7 +39,7 @@ names; this project does not restate them.
    service and model list. It is fed by the same server cache over RPC and never fetches the status
    endpoint itself.
 
-### Presentation decisions
+### Presentation rules
 
 Whoever changes what the plugin shows owns these decisions, and can defend them:
 
@@ -62,33 +62,20 @@ Whoever changes what the plugin shows owns these decisions, and can defend them:
 Before adding a surface or a field, say what it replaces or why the user needs it. A compact pill
 that is always right beats a dashboard that is always in the way.
 
-## What is true
+## The status feed
 
-### The status API
+`https://status.opencode.ai/api/status` is the JSON snapshot behind <https://status.opencode.ai>:
+public, no key, `Cache-Control: public, max-age=15`, and no CORS header. Only the server part fetches
+it.
 
-`https://status.opencode.ai/api/status` is the JSON snapshot behind <https://status.opencode.ai>.
-Public, no key, `Cache-Control: public, max-age=15`, and **no CORS header**.
-
-| Field | Meaning |
-| --- | --- |
-| `status` | Overall state: `operational`, `degraded`, `outage`, `unknown`. |
-| `updatedAt`, `since`, `stale` | Snapshot time, first observation, and the origin's own stale flag. |
-| `components[]` | One row per service: `service`, `status`, `reason`, `since`, `models[]`, `breakdown[]`, `speed`. |
-| `components[].breakdown[]` | Per model: `id`, `status`, `reason`, `speed { ttft, tps }`. |
-| `incidents[]` | `id`, `event`, `service`, `startedAt`, `resolvedAt`, `status`, `reason`, `models[]`. |
-| `notes[]` | Incident updates: `event`, `body`, `at`, `updatedAt`. |
-| `history[]` | 7 days in 3-hour periods: `start`, `services`, `models`. |
-
-Services: `console` (Console API), `logs` (Request logs), `inference` (Inference API), `go` (models
-included with Go and Go Plus), `payg` (models billed by usage), `free` (free models and trials).
-Reasons: `none`, `errors`, `upstream`, `latency`, `availability`. Speeds are medians over the last
-five minutes: `ttft` in milliseconds, `tps` in tokens per second. The feed's `components[].models[]`
-is present but empty; the model rows are in `breakdown[]`.
+The field table, the service and reason enumerations, the speed units and the staleness rules live in
+[`docs/status-feed.md`](docs/status-feed.md). The parser and the contract check implement that file,
+so change the payload handling and the document together.
 
 The payload is untrusted input. An unknown state, a missing field or a failed fetch is `unknown`,
 never `operational`.
 
-### The desktop plugin
+## How the plugin loads
 
 - The GUI is loaded from the plugin's server part; a plugin whose server part fails to load has no
   GUI.
@@ -105,7 +92,40 @@ never `operational`.
 - The status endpoint has no CORS header, so only the server part (Node) or `main` (Electron) may
   fetch it. A window reads the server's cache over RPC.
 
-## Permissions
+## Product invariants
+
+These describe what the plugin is; a change that breaks one is not a feature.
+
+- **No scraping.** The status page's HTML is never parsed. The JSON endpoint is the only source; a
+  missing field is handled, not worked around by reading the page.
+- **No credentials.** The plugin never asks for an API key, a session token or a Console login.
+- **One poller per server.** The server part fetches and caches; windows render. No timer in a
+  window, no status fetch from a window.
+- **Never claim health the data does not support.** Unknown, stale and failed lookups are shown as
+  unknown or stale, never as operational.
+- **The pill stays compact.** One line, readable without a tooltip. Detail belongs in the panel.
+- **The watched scope is configuration, not code.** Services, models and display switches come from
+  the plugin options and the settings store. Read `ctx.options` and the settings store where they
+  are used; a changed option reloads the plugin.
+
+## Engineering rules
+
+- **Published behaviour is documented.** A new option or surface updates, in the same change, the
+  README tables, the settings page, the relevant file under `docs/` and this file.
+- **The GUI API is experimental.** Pin `@opencode/plugin` to the version the plugin was built
+  against, say so in the README, keep the plugin usable when a contribution cannot render, and do
+  not bundle modules the app provides.
+- **Dependencies move deliberately.** `bun.lock` is committed; bump `@opencode/plugin` as its own
+  change, with a CHANGELOG note.
+- **Versioning is semver with a CHANGELOG entry.** Release steps live in
+  [`docs/releasing.md`](docs/releasing.md); a published version number is never reused.
+- **Commits use the project identity.** The repository and global git config supply author and
+  committer; never override them with a personal address or an agent identity. Conventional Commits
+  (`feat:`, `fix:`, `docs:`, `ci:`, `chore:`, `test:`, `refactor:`), one change per commit.
+- **`main` is public history.** No amending, rebasing or force-pushing it, and a published tag is
+  never moved; revert instead. Branch, open a pull request, squash-merge.
+
+## Agent permissions
 
 Least privilege, and nothing that the global configuration denies is re-enabled.
 
@@ -130,40 +150,22 @@ Least privilege, and nothing that the global configuration denies is re-enabled.
   `opencode.jsonc`, its own prompt or the source only when the user asks for it, and never to
   loosen a permission or a rule.
 
-## Project rules
-
-- **No scraping.** The status page's HTML is never parsed. The JSON endpoint is the only source; a
-  missing field is handled, not worked around by reading the page.
-- **No credentials.** The plugin never asks for an API key, a session token or a Console login.
-- **One poller per server.** The server part fetches and caches; windows render. No timer in a
-  window, no status fetch from a window.
-- **Never claim health the data does not support.** Unknown, stale and failed lookups are shown as
-  unknown or stale, never as operational.
-- **The pill stays compact.** One line, readable without a tooltip. Detail belongs in the panel.
-- **The watched scope is configuration, not code.** Services, models and display switches come from
-  the plugin options and the settings store. Read `ctx.options` and the settings store where they
-  are used; a changed option reloads the plugin.
-- **Published behaviour is documented.** A new option or surface updates the README table, the
-  settings page and this file in the same change.
-- **The GUI API is experimental.** Pin `@opencode/plugin` to the version the plugin was built
-  against, say so in the README, keep the plugin usable when a contribution cannot render, and do
-  not bundle modules the app provides.
-
-## Data & versioning
+## The local/ folder
 
 - All generated or private output lives in `local/`. Never write it anywhere else.
-- `local/` is not versioned. The rest of the folder — instructions, configuration, source and
-  package files — is the reusable project shell, which the repository tracks.
+- `local/` is not versioned. The rest of the folder — instructions, configuration, source, `docs/`
+  and package files — is the reusable project shell, which the repository tracks.
 - `local/` is the only folder that may hold personal or sensitive data.
 
-## Verification
+## Verification checklist
 
 - `bun run typecheck` and `bun run build` pass, and the build emits one CommonJS file at
   `dist/gui-experimental.cjs`.
 - `bun test` passes; the domain tests need no network.
 - `bun run check:api` against the live endpoint is green or inconclusive; a contract failure means
-  the feed changed, and the parser or the contract needs attention. It is not part of pull request
-  CI, so an outage or a network problem never blocks a change.
+  the feed changed, and [`docs/status-feed.md`](docs/status-feed.md), the parser or the contract needs
+  attention. It is not part of pull request CI, so an outage or a network problem never blocks a
+  change.
 - CI verifies typecheck, tests and build on Ubuntu, Windows and macOS.
 - The plugin loads in **Settings → Extensions → Plugins**, and the pill appears in a session.
 - The TUI loads in `opencode`: the footer mark appears, `/provider-status` lists services and models,
@@ -171,5 +173,14 @@ Least privilege, and nothing that the global configuration denies is re-enabled.
 - A fetch against the live endpoint returns a snapshot whose services and models match the watched
   scope; an unreachable endpoint shows the stale or unknown state instead of an error dialog.
 - The README describes what the plugin actually does.
-- `python ..\generic\projectbuilder\.claude\skills\change-opencode-project\scripts\check-project.py .`
-  — the workspace invariant check.
+- The workspace invariant check, when the workspace provides one, still passes.
+
+## Where to read more
+
+| Topic | File |
+| --- | --- |
+| Feed contract: fields, enums, units, staleness | [`docs/status-feed.md`](docs/status-feed.md) |
+| Version bump, staging, trusted publishing, tarball test | [`docs/releasing.md`](docs/releasing.md) |
+| User-facing behaviour and every option | [`README.md`](README.md) |
+| Contributor setup, tests, pull requests | [`CONTRIBUTING.md`](CONTRIBUTING.md) |
+| Security reporting | [`SECURITY.md`](SECURITY.md) |

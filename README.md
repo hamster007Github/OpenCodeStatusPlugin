@@ -58,19 +58,12 @@ instead.
 snapshot behind <https://status.opencode.ai>. It is public, needs no key and is cached by the origin
 for 15 seconds.
 
-- `status`, `updatedAt`, `since`, `stale` — the overall state and the origin's own staleness flag.
-- `components[]` — one row per service (`console`, `logs`, `inference`, `go`, `payg`, `free`) with
-  its state, reason, `since` and median speed. The model rows are in `breakdown[]`; the
-  `models[]` array is present but empty in the feed, so the parser reads both.
-- `incidents[]` — incidents with their start, resolution, reason and affected models. Only the
-  ongoing ones are cached.
-- `notes[]` — incident updates. The parser keeps the latest update per incident event.
-- `history[]` — seven days in three-hour periods (56 buckets), with a state per service and per
-  model.
-
 The endpoint sends no CORS header, so a browser window cannot call it directly. The plugin's server
 part polls and caches it, and the GUI reads that cache over RPC: one request per OpenCode server, not
 one per window. The status page's HTML is never parsed.
+
+Every field, the service and reason enumerations, the speed units, the history buckets and the
+staleness rules are documented in [`docs/status-feed.md`](https://github.com/hamster007Github/OpenCodeStatusPlugin/blob/main/docs/status-feed.md).
 
 ## Requirements
 
@@ -261,103 +254,39 @@ pull request CI: a status outage or a GitHub network problem must never block a 
 
 ## Releasing
 
-Publishing is manual. The version lives in `package.json` and is `0.1.0`. Bump it before every later
-publish, because npm refuses a duplicate version.
+The version lives in `package.json` and must be bumped for every publish, because npm refuses a
+duplicate version. Notes go in `CHANGELOG.md`; the full runbook is
+[`docs/releasing.md`](https://github.com/hamster007Github/OpenCodeStatusPlugin/blob/main/docs/releasing.md).
 
 ```sh
-bun run typecheck && bun test             # gates
-bun pm pack --dry-run                     # inspect the tarball: src, dist, README, LICENSE, CHANGELOG
-npm login --auth-type=web                 # once per machine: browser approval, no terminal OTP
-npm whoami                                # prints the npm account that will publish
-npm stage publish                         # uploads to npm's staging area; needs no 2FA
-npm stage list                            # stage id, status and shasum to review
-npm stage download <stage-id>             # optional: the exact tarball that will go live
-npm view opencode-status-plugin version   # after approval, what the registry serves
-git tag -a v0.1.0 -m "0.1.0" && git push origin main --follow-tags
+bun run typecheck && bun test && bun run build && bun run check:api
+bun pm pack --dry-run      # the tarball: src, dist, README, LICENSE, CHANGELOG
 ```
 
-Staging, not a direct `npm publish`, because the account's 2FA is a security key: the registry asks
-the CLI for a one-time password that only an authenticator app can produce. `npm stage publish` needs
-no 2FA, and the approval happens in the browser where the security key works:
+Publishing needs npm ≥ 11.15 and Node ≥ 22.14. The maintainer account uses a security key as its
+second factor, so a release goes through `npm stage publish` and an approval in the browser instead of
+a terminal one-time password; later releases run in the manual **Publish** workflow with npm Trusted
+Publishing (OIDC). Both paths, the trusted-publisher setup, the tarball smoke test and the
+post-publish checks are in [`docs/releasing.md`](https://github.com/hamster007Github/OpenCodeStatusPlugin/blob/main/docs/releasing.md).
 
-1. npmjs.com → **Staged Packages** → the entry → **Approve** (the 2FA prompt happens there).
-2. The status goes from `validating` to approvable; approval publishes the version.
-3. Staging a name that does not exist yet publishes a public placeholder `0.0.0-stage`, which claims
-   the name; the staged version itself stays private until it is approved.
-
-Staged publishing needs npm ≥ 11.15 and Node ≥ 22.14 (`npm install -g npm@latest`). `npm stage
-publish` runs `prepack`, so `bun` must be on `PATH` in that shell. A published version number cannot
-be reused, so a bad publish is corrected with a patch bump, not by deleting it.
-
-The **first** publish of a new package name happens locally, because the trusted publisher is
-configured on the package page. After that, publishing goes through GitHub Actions with **npm Trusted
-Publishing (OIDC)** — no long-lived token and no 2FA bypass:
-
-1. npmjs.com → your package → **Settings → Trusted Publisher → GitHub Actions**:
-   organization `hamster007Github`, repository `OpenCodeStatusPlugin`, workflow filename `publish.yml`.
-   A new entry expires if it has not completed a successful publish within two days.
-2. **Actions → Publish → Run workflow**. `dry_run` defaults to `true`, so the first run only builds,
-   typechecks, tests, packs, installs the tarball and checks the exports. Set it to `false` to
-   publish.
-3. The job refuses a version that is already on npm.
-
-The workflow does **not** publish with provenance: npm only attests builds from a public repository,
-and this repository is private. The OIDC publish itself works on a private repository, provided
-`repository.url` in `package.json` matches it. The workflow needs an npm CLI that understands OIDC, so
-it installs the latest npm; GitHub's OIDC token (`id-token: write`) is exchanged for a short-lived
-publish credential. If you ever see an authentication error, the trusted publisher entry is missing
-or names a different workflow file.
-
-`prepack` builds the GUI bundle, so `dist/` never has to be committed; a publish from a clean clone
-still ships the current bundle.
-
-### Test the packed tarball
-
-The tarball can be installed and loaded like the published package, without publishing:
-
-```sh
-bun pm pack --destination local
-mkdir -p local/pack-test && cd local/pack-test
-bun init -y
-bun add ../../opencode-status-plugin-0.1.0.tgz
-
-# every export resolves from the installed copy
-bun -e "const p = require('opencode-status-plugin'); console.log(p.default.id)"
-bun -e "console.log(require.resolve('opencode-status-plugin/gui-experimental'))"
-bun -e "console.log(require.resolve('opencode-status-plugin/tui'))"
-bun -e "console.log(require('opencode-status-plugin/rpc').ProviderStatus.id)"
-```
-
-Then let OpenCode load it from that directory:
-
-```jsonc
-// local/pack-test/opencode.jsonc
-{ "plugins": ["opencode-status-plugin"] }
-```
-
-```sh
-opencode api --standalone post /api/rpc/provider-status/snapshot --data "{}"
-```
-
-`rpc.invalid_input … Expected object` means the plugin loaded and its RPC is registered — the body is
-deliberately incomplete. `rpc.unavailable` means it did not load; check the server log for the plugin
-load error. The GUI still needs the global config and a window, so use the panel or the pill there.
-
-The manual **Publish** workflow repeats this: it packs the tarball, installs it into a temp directory
-on the runner, and asserts that the server, RPC, TUI and GUI exports resolve before it publishes.
-
-## Open points
+## Not yet verified
 
 - [ ] A load in OpenCode Desktop on Linux or macOS
 - [ ] A load of the TUI part in the OpenCode CLI
+- [ ] A load of the published npm package in OpenCode, on any platform
 
 ## Contributing
 
 Issues and pull requests are welcome. Keep the payload handling defensive, keep the pill compact,
 and run `bun run typecheck` and `bun test` before opening a pull request. See
-[CONTRIBUTING.md](CONTRIBUTING.md), [SECURITY.md](SECURITY.md) and
-[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
+[CONTRIBUTING.md](https://github.com/hamster007Github/OpenCodeStatusPlugin/blob/main/CONTRIBUTING.md),
+[SECURITY.md](https://github.com/hamster007Github/OpenCodeStatusPlugin/blob/main/SECURITY.md) and
+[CODE_OF_CONDUCT.md](https://github.com/hamster007Github/OpenCodeStatusPlugin/blob/main/CODE_OF_CONDUCT.md).
+The feed contract is in
+[`docs/status-feed.md`](https://github.com/hamster007Github/OpenCodeStatusPlugin/blob/main/docs/status-feed.md),
+the release runbook in
+[`docs/releasing.md`](https://github.com/hamster007Github/OpenCodeStatusPlugin/blob/main/docs/releasing.md).
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT — see [LICENSE](https://github.com/hamster007Github/OpenCodeStatusPlugin/blob/main/LICENSE).

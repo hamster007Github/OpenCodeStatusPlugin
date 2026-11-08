@@ -12,6 +12,9 @@
 !/CODE_OF_CONDUCT.md
 !/opencode.jsonc
 
+# Reference documentation: the feed contract and the release runbook.
+!/docs/
+
 !/.claude/
 /.claude/*
 !/.claude/skills/
