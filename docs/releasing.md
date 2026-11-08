@@ -86,6 +86,10 @@ git push origin main --follow-tags
 Then create a GitHub release from the tag with the CHANGELOG section as its notes. From a public
 repository that release is the user-facing record of the version.
 
+Users do not receive the version automatically. An unpinned entry picks it up with
+`opencode plugin update`; an entry pinned to an exact version stays where it is until its owner changes
+it. Write the release notes for that decision, because the update is a deliberate action.
+
 Finally, prove that OpenCode loads the published package — the registry serving it is not the same
 thing:
 

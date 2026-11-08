@@ -124,6 +124,34 @@ For local development, point your **global** config at this folder:
 List the plugin in one place only. A second entry in the project config loads another instance with
 the same id, and the desktop app reports the plugin as failed.
 
+## Update
+
+A configured plugin does not update itself. OpenCode checks unpinned npm plugins when its server
+starts, but it keeps the installed version until you ask it to update:
+
+```sh
+opencode plugin check                            # is anything outdated?
+opencode plugin update                           # every outdated package plugin
+opencode plugin update opencode-status-plugin    # just this one
+opencode plugin list                             # what is installed
+```
+
+An entry pinned to an exact version (`"opencode-status-plugin@0.1.0"`) is skipped by both commands:
+drop the version, or run `opencode plugin add opencode-status-plugin@0.2.0`. A local path is never
+updated by the CLI, because you edit that directory yourself.
+
+Plugin changes reload without a restart. If the server part still reports the old version, restart
+the shared service and check it:
+
+```sh
+opencode service restart
+opencode service status
+```
+
+In Desktop, **Settings → Extensions → Plugins** shows the installed version, and its **Reload** button
+loads a plugin again after a failed start. The per-plugin switch there only hides the desktop UI; to
+turn the plugin off entirely, add `"-provider-status"` to `plugins`.
+
 ## Configuration
 
 Options are passed in the plugin entry. OpenCode reloads the plugin when they change.

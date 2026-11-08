@@ -5,6 +5,12 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
 
+### Added
+
+- The README has an **Update** section: `opencode plugin check`, `opencode plugin update`, what an
+  exact pinned version skips, and the service restart and Desktop reload when the old version stays
+  loaded.
+
 ### Changed
 
 - Documentation: the feed contract moved to `docs/status-feed.md` and the release steps to
