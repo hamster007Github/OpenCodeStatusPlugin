@@ -3,6 +3,21 @@
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Added
+
+- The README has an **Update** section: `opencode plugin check`, `opencode plugin update`, what an
+  exact pinned version skips, and the service restart and Desktop reload when the old version stays
+  loaded.
+
+### Changed
+
+- Documentation: the feed contract moved to `docs/status-feed.md` and the release steps to
+  `docs/releasing.md`. The README is user-facing again, section titles name what they contain, and
+  every fact has a single home instead of being repeated across the README, `AGENTS.md` and
+  `CONTRIBUTING.md`.
+
 ## [0.1.0] - 2026-11-08
 
 ### Added

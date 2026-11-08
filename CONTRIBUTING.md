@@ -5,7 +5,8 @@ on purpose: one pill, one panel, one settings page.
 
 ## Requirements
 
-- [Bun](https://bun.sh) 1.x for install, test and build. Node.js is not needed.
+- [Bun](https://bun.sh) 1.x for install, test and build. Node.js is needed only for the npm commands in
+  [docs/releasing.md](docs/releasing.md).
 - OpenCode Desktop 2.x to load the plugin.
 
 `@opencode/plugin` is pinned to the version the plugin was built against. Bumping it is a change of
@@ -60,7 +61,9 @@ src/status/         types, fetch, normalisation, selectors, formatting, marks
 test/               tests for the status domain and the TUI controller
 ```
 
-## Rules that are not negotiable
+## Invariants
+
+The contract is [`AGENTS.md`](AGENTS.md); these are the ones a pull request is judged by:
 
 - The upstream payload is untrusted. An unknown state, a missing field or a failed fetch becomes
   `unknown` or `stale`. Never render it as `operational`.
@@ -78,7 +81,8 @@ Update, in the same pull request:
 1. `README.md`: the option table and the surface table,
 2. the settings page in `src/gui/settings.tsx`,
 3. `AGENTS.md`,
-4. `CHANGELOG.md` under `Unreleased`.
+4. the relevant file under `docs/`,
+5. `CHANGELOG.md` under `Unreleased`.
 
 ## Tests
 
@@ -93,10 +97,16 @@ contract fails. `bun run check:api` runs the same check locally.
 
 ## Commits and pull requests
 
-- One subject per commit, imperative mood, no prefix conventions to learn.
+- Conventional Commits: `feat:`, `fix:`, `docs:`, `ci:`, `chore:`, `test:`, `refactor:`. Imperative
+  subject, 72 characters, the reason in the body. Note a breaking change with `BREAKING CHANGE:`.
+- One change per commit. A formatting sweep, a dependency bump and a feature do not share a commit.
+- Work on a branch and open a pull request; `main` is squash-merged and linear.
+- `main` is public history: no amend, rebase or force-push, and a published tag is never moved.
+  Revert instead.
+- Every user-visible change carries its `## Unreleased` CHANGELOG entry in the same pull request.
 - Keep the pull request description short: what changes, which surface, what it replaces.
 - Run the checklist in the pull request template before asking for a review.
 
-## Licence
+## License
 
 Contributions are MIT-licensed, like the project.
