@@ -35,6 +35,43 @@ Deliberately not shown:
   panel derive their state from the watched scope only, so a free-tier outage does not alarm a Go
   user.
 
+## Screenshots
+
+**Desktop.** The pill sits above the composer and answers one question in one line — which scope,
+which state. The arrow marks what this plugin adds to the app.
+
+<a href="https://raw.githubusercontent.com/hamster007Github/OpenCodeStatusPlugin/main/docs/images/desktop-pill.png">
+  <img src="https://raw.githubusercontent.com/hamster007Github/OpenCodeStatusPlugin/main/docs/images/desktop-pill.png"
+       alt="Composer with the pill OpenCode [Go] and a green mark above the prompt, the pill marked with an arrow"
+       width="640">
+</a>
+
+The panel behind it carries the detail: per service and per model, with the reason, the time since the
+state began, median time to first token, tokens per second, ongoing incidents and the 7-day strip.
+
+<a href="https://raw.githubusercontent.com/hamster007Github/OpenCodeStatusPlugin/main/docs/images/desktop-panel.png">
+  <img src="https://raw.githubusercontent.com/hamster007Github/OpenCodeStatusPlugin/main/docs/images/desktop-panel.png"
+       alt="Provider status panel listing Go models with state, TTFT and tokens per second, plus ongoing incidents and a 7-day history strip"
+       width="760">
+</a>
+
+**CLI.** The footer mark is the pill's scope and mark without the `OpenCode` prefix, because terminal
+width is limited. The arrow marks it; `5.3K (1%)` and `ctrl+p commands` belong to the app.
+
+<a href="https://raw.githubusercontent.com/hamster007Github/OpenCodeStatusPlugin/main/docs/images/tui-footer.png">
+  <img src="https://raw.githubusercontent.com/hamster007Github/OpenCodeStatusPlugin/main/docs/images/tui-footer.png"
+       alt="Terminal footer with [Go] and a green mark next to the app's context usage and key hint, the plugin mark marked with an arrow"
+       width="760">
+</a>
+
+`/provider-status` is the panel's terminal counterpart:
+
+<a href="https://raw.githubusercontent.com/hamster007Github/OpenCodeStatusPlugin/main/docs/images/tui-provider-status.png">
+  <img src="https://raw.githubusercontent.com/hamster007Github/OpenCodeStatusPlugin/main/docs/images/tui-provider-status.png"
+       alt="/provider-status list of the watched services and models with state, TTFT and tokens per second"
+       width="760">
+</a>
+
 ## Severity
 
 One scale, used by every surface:
@@ -170,7 +207,7 @@ Options are passed in the plugin entry. OpenCode reloads the plugin when they ch
 | `tuiPromptFooter` | `true` | Show it in the session prompt footer as well. |
 | `tuiNotify` | `"off"` | `"off"`, `"degraded"` or `"outage"`: a terminal notification for the watched scope. Separate from `notify`. |
 | `apiUrl` | the official endpoint | Override for testing against a mirror. HTTPS only, or plain HTTP on `localhost`/`127.0.0.1`. |
-| `lights` | `{"operational":"🟢","degraded":"🟡","outage":"🔴","unknown":"❔️","stale":"❔️"}` | The mark the pill shows for each state. Any text or symbol works; `stale` covers old data. |
+| `lights` | `{"operational": "🟢",`<br>`"degraded": "🟡",`<br>`"outage": "🔴",`<br>`"unknown": "❔️",`<br>`"stale": "❔️"}` | The mark the pill shows for each state. Any text or symbol works; `stale` covers old data. |
 
 ```jsonc
 {

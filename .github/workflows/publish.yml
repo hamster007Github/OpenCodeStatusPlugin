@@ -77,8 +77,8 @@ jobs:
           bun -e "const tui = require.resolve('opencode-status-plugin/tui'); if (!tui.endsWith('tui.tsx')) process.exit(1); console.log('tui part:', tui)"
           bun -e "const rpc = require('opencode-status-plugin/rpc'); if (rpc.ProviderStatus.id !== 'provider-status') process.exit(1); console.log('rpc part:', rpc.ProviderStatus.id)"
 
-      # No --provenance: npm only attests builds from a public repository, and this repository is
-      # private. Trusted publishing itself works on private repositories; the attestation does not.
+      # Provenance is generated automatically by trusted publishing for a public repository, so the
+      # workflow passes no --provenance flag.
       - name: Publish
         if: inputs.dry_run == false
         run: npm publish --access public
