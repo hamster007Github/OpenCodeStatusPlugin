@@ -65,10 +65,10 @@ There is no long-lived token: GitHub's OIDC token (`id-token: write`) is exchang
 publish credential. If authentication fails, the trusted publisher entry is missing or names a
 different workflow file.
 
-**Provenance** is generated automatically by trusted publishing, but only for a build from a **public**
-repository. The workflow therefore passes no `--provenance` flag; on a private repository no
-attestation is produced and the publish still succeeds. Making the repository public gives the next
-release an attestation without any workflow change.
+**Provenance** is generated automatically by trusted publishing for a build from a **public**
+repository, so the workflow passes no `--provenance` flag. The attestation links the tarball to this
+repository and commit and appears on the npm page. `0.1.0` was published while the repository was
+still private, so it has none; `0.1.1` and later carry one.
 
 `prepack` builds the GUI bundle, so `dist/` is never committed; a publish from a clean clone still
 ships the current bundle.
