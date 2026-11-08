@@ -16,7 +16,7 @@ on:
 
 permissions:
   contents: read
-  # The OIDC token npm exchanges for a short-lived publish credential, and provenance signing.
+  # The OIDC token npm exchanges for a short-lived publish credential.
   id-token: write
 
 jobs:
@@ -77,9 +77,11 @@ jobs:
           bun -e "const tui = require.resolve('opencode-status-plugin/tui'); if (!tui.endsWith('tui.tsx')) process.exit(1); console.log('tui part:', tui)"
           bun -e "const rpc = require('opencode-status-plugin/rpc'); if (rpc.ProviderStatus.id !== 'provider-status') process.exit(1); console.log('rpc part:', rpc.ProviderStatus.id)"
 
-      - name: Publish with provenance
+      # No --provenance: npm only attests builds from a public repository, and this repository is
+      # private. Trusted publishing itself works on private repositories; the attestation does not.
+      - name: Publish
         if: inputs.dry_run == false
-        run: npm publish --provenance --access public
+        run: npm publish --access public
 
       - name: Dry run
         if: inputs.dry_run == true
