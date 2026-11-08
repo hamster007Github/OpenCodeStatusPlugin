@@ -265,18 +265,29 @@ Publishing is manual. The version lives in `package.json` and is `0.1.0`. Bump i
 publish, because npm refuses a duplicate version.
 
 ```sh
-bun run typecheck && bun test        # gates
-bun pm pack --dry-run                # inspect the tarball: src, dist, README, LICENSE, CHANGELOG
-npm login --auth-type=web            # once per machine: browser approval plus the 2FA code
-npm whoami                           # prints the npm account that will publish
-npm publish                          # prepack builds the bundle, then npm asks for an OTP
-npm view opencode-status-plugin version   # what the registry serves now
+bun run typecheck && bun test             # gates
+bun pm pack --dry-run                     # inspect the tarball: src, dist, README, LICENSE, CHANGELOG
+npm login --auth-type=web                 # once per machine: browser approval, no terminal OTP
+npm whoami                                # prints the npm account that will publish
+npm stage publish                         # uploads to npm's staging area; needs no 2FA
+npm stage list                            # stage id, status and shasum to review
+npm stage download <stage-id>             # optional: the exact tarball that will go live
+npm view opencode-status-plugin version   # after approval, what the registry serves
 git tag -a v0.1.0 -m "0.1.0" && git push origin main --follow-tags
 ```
 
-`npm publish` runs `prepack`, so `bun` must be on `PATH` in that shell. A 2FA code is required for
-every publish; pass it as `--otp=123456` if npm does not prompt. A published version number cannot be
-reused, so a bad publish is corrected with a patch bump, not by deleting it.
+Staging, not a direct `npm publish`, because the account's 2FA is a security key: the registry asks
+the CLI for a one-time password that only an authenticator app can produce. `npm stage publish` needs
+no 2FA, and the approval happens in the browser where the security key works:
+
+1. npmjs.com → **Staged Packages** → the entry → **Approve** (the 2FA prompt happens there).
+2. The status goes from `validating` to approvable; approval publishes the version.
+3. Staging a name that does not exist yet publishes a public placeholder `0.0.0-stage`, which claims
+   the name; the staged version itself stays private until it is approved.
+
+Staged publishing needs npm ≥ 11.15 and Node ≥ 22.14 (`npm install -g npm@latest`). `npm stage
+publish` runs `prepack`, so `bun` must be on `PATH` in that shell. A published version number cannot
+be reused, so a bad publish is corrected with a patch bump, not by deleting it.
 
 The **first** publish of a new package name happens locally, because the trusted publisher is
 configured on the package page. After that, publishing goes through GitHub Actions with **npm Trusted
@@ -284,14 +295,18 @@ Publishing (OIDC)** — no long-lived token and no 2FA bypass:
 
 1. npmjs.com → your package → **Settings → Trusted Publisher → GitHub Actions**:
    organization `hamster007Github`, repository `OpenCodeStatusPlugin`, workflow filename `publish.yml`.
+   A new entry expires if it has not completed a successful publish within two days.
 2. **Actions → Publish → Run workflow**. `dry_run` defaults to `true`, so the first run only builds,
-   typechecks, tests, packs, installs the tarball and checks the three exports. Set it to `false` to
+   typechecks, tests, packs, installs the tarball and checks the exports. Set it to `false` to
    publish.
-3. The job refuses a version that is already on npm and publishes with provenance.
+3. The job refuses a version that is already on npm.
 
-The workflow needs an npm CLI that understands OIDC, so it installs the latest npm; GitHub's OIDC
-token (`id-token: write`) is exchanged for a short-lived publish credential. If you ever see an
-authentication error, the trusted publisher entry is missing or names a different workflow file.
+The workflow does **not** publish with provenance: npm only attests builds from a public repository,
+and this repository is private. The OIDC publish itself works on a private repository, provided
+`repository.url` in `package.json` matches it. The workflow needs an npm CLI that understands OIDC, so
+it installs the latest npm; GitHub's OIDC token (`id-token: write`) is exchanged for a short-lived
+publish credential. If you ever see an authentication error, the trusted publisher entry is missing
+or names a different workflow file.
 
 `prepack` builds the GUI bundle, so `dist/` never has to be committed; a publish from a clean clone
 still ships the current bundle.
