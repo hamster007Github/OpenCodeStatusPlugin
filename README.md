@@ -265,10 +265,18 @@ Publishing is manual. The version lives in `package.json` and is `0.1.0`. Bump i
 publish, because npm refuses a duplicate version.
 
 ```sh
-bun run build          # prepack also builds, so this is a check
-bun pm pack --dry-run  # inspect the tarball: src, dist, README, LICENSE, CHANGELOG
-npm publish            # first publish: sign in, confirm with your 2FA code
+bun run typecheck && bun test        # gates
+bun pm pack --dry-run                # inspect the tarball: src, dist, README, LICENSE, CHANGELOG
+npm login --auth-type=web            # once per machine: browser approval plus the 2FA code
+npm whoami                           # prints the npm account that will publish
+npm publish                          # prepack builds the bundle, then npm asks for an OTP
+npm view opencode-status-plugin version   # what the registry serves now
+git tag -a v0.1.0 -m "0.1.0" && git push origin main --follow-tags
 ```
+
+`npm publish` runs `prepack`, so `bun` must be on `PATH` in that shell. A 2FA code is required for
+every publish; pass it as `--otp=123456` if npm does not prompt. A published version number cannot be
+reused, so a bad publish is corrected with a patch bump, not by deleting it.
 
 The **first** publish of a new package name happens locally, because the trusted publisher is
 configured on the package page. After that, publishing goes through GitHub Actions with **npm Trusted
