@@ -1,6 +1,6 @@
 {
   "name": "opencode-status-plugin",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "OpenCode Go provider health inside OpenCode Desktop and the CLI: a composer pill, a side panel, a settings page and a terminal footer.",
   "type": "module",
   "license": "MIT",

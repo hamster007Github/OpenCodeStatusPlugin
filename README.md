@@ -175,7 +175,7 @@ opencode plugin update opencode-status-plugin    # just this one
 opencode plugin list                             # what is installed
 ```
 
-An entry pinned to an exact version (`"opencode-status-plugin@0.1.0"`) is skipped by both commands:
+An entry pinned to an exact version (`"opencode-status-plugin@0.1.1"`) is skipped by both commands:
 drop the version, or run `opencode plugin add opencode-status-plugin@0.2.0`. A local path is never
 updated by the CLI, because you edit that directory yourself.
 
