@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { existsSync, readFileSync } from "node:fs"
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs"
 import { join } from "node:path"
 import { createRoot, createSignal } from "solid-js"
 import * as gui from "@opencode/plugin/gui"
@@ -10,13 +10,28 @@ import * as effect from "effect"
  * Run the real GUI bundle against a fake host, the way the published V2 plugins test theirs.
  * This catches setup-time crashes and proves when the window reads the cache.
  *
- * `dist/` is not versioned, so a clean checkout has no bundle. Build it once here rather than
- * making a fresh clone run a build before it may run the tests.
+ * `dist/` is not versioned, so a clean checkout has no bundle. Build it here, and rebuild it when
+ * the source is newer, so the test never passes against a stale bundle after a local edit.
  */
 const root = join(import.meta.dir, "..")
 const bundle = join(root, "dist", "gui-experimental.cjs")
 
-if (!existsSync(bundle)) {
+function newestSource(dir: string): number {
+  let newest = 0
+
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const path = join(dir, entry.name)
+    newest = Math.max(newest, entry.isDirectory() ? newestSource(path) : statSync(path).mtimeMs)
+  }
+
+  return newest
+}
+
+const stale =
+  !existsSync(bundle) ||
+  statSync(bundle).mtimeMs < Math.max(newestSource(join(root, "src")), statSync(join(root, "vite.config.ts")).mtimeMs)
+
+if (stale) {
   const build = Bun.spawnSync(["bun", "run", "build"], { cwd: root, stdout: "inherit", stderr: "inherit" })
   if (build.exitCode !== 0) {
     throw new Error("bun run build failed; the GUI bundle test needs dist/gui-experimental.cjs")
@@ -58,6 +73,7 @@ const view = {
 function mount() {
   const [session, setSession] = createSignal<unknown>(undefined)
   const calls: Array<{ method: string; options: unknown }> = []
+  const remoteCalls: Array<{ method: string; options: unknown }> = []
   const items: Array<{ registry: unknown; item: unknown }> = []
 
   const client = {
@@ -68,6 +84,20 @@ function mount() {
       },
       refresh: async (_input: unknown, options: unknown) => {
         calls.push({ method: "refresh", options })
+        return view
+      },
+      events: { on: () => () => undefined },
+    }),
+  }
+
+  const remoteClient = {
+    rpc: () => ({
+      snapshot: async (_input: unknown, options: unknown) => {
+        remoteCalls.push({ method: "snapshot", options })
+        return view
+      },
+      refresh: async (_input: unknown, options: unknown) => {
+        remoteCalls.push({ method: "refresh", options })
         return view
       },
       events: { on: () => () => undefined },
@@ -92,7 +122,7 @@ function mount() {
     cleanup = definition.setup!(ctx as never)
   })
 
-  return { calls, items, setSession, cleanup }
+  return { calls, remoteCalls, remoteClient, items, setSession, cleanup }
 }
 
 describe("the GUI bundle", () => {
@@ -115,5 +145,28 @@ describe("the GUI bundle", () => {
     // asserted here.
     const { calls } = mount()
     expect(calls).toEqual([])
+  })
+
+  test("reads the app's own server for a session on another server, without its location", async () => {
+    const { calls, remoteCalls, remoteClient, items, setSession } = mount()
+    const panel = items.find((entry) => entry.registry === gui.Panel)?.item as { focus: () => void }
+
+    setSession({
+      key: "remote\nsession",
+      server: { client: remoteClient },
+      location: { directory: "/remote/project" },
+    })
+
+    panel.focus()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    // The status is app-wide: the other server does not need the plugin.
+    expect(remoteCalls).toEqual([])
+    expect(calls.length).toBeGreaterThan(0)
+
+    // A location the app's server does not know is rejected by the RPC.
+    for (const call of calls) {
+      expect(call.options).not.toHaveProperty("location")
+    }
   })
 })

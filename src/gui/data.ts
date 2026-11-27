@@ -38,15 +38,11 @@ export function createStatus(ctx: WindowContext, onView?: (view: StatusView) => 
   const describe = (cause: unknown): string =>
     cause instanceof Error && cause.message ? cause.message : "the OpenCode server did not answer"
 
-  // The window's client is ready only once a session is routed. Passing the session's location is
-  // what the published V2 plugins do; without it a call can target the wrong plugin instance.
-  const callOptions = () => {
-    const location = ctx.sessions.current()?.location
-    return {
-      signal: AbortSignal.timeout(20_000),
-      ...(location ? { location } : {}),
-    }
-  }
+  // The plugin's poller lives on the desktop app's own server, which loads this window. The status
+  // is app-wide, so a session on another OpenCode server reads the same cache and that server does
+  // not need the plugin. Never attach the session's location: the app's server does not know a
+  // remote directory, and the RPC rejects an unknown location.
+  const callOptions = () => ({ signal: AbortSignal.timeout(20_000) })
 
   const reload = async () => {
     try {
@@ -92,7 +88,8 @@ export function createStatus(ctx: WindowContext, onView?: (view: StatusView) => 
     },
   )
 
-  // Fetch when a session is routed, not at setup: the window's client is not ready before that.
+  // Fetch when a session is routed, not at setup: a window on Home has nothing to show, and a
+  // route change is a reliable moment to catch up with the app-wide cache.
   createKeyed(
     () => ctx.sessions.current()?.key,
     () => void reload(),
