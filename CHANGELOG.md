@@ -23,6 +23,12 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   every fact has a single home instead of being repeated across the README, `AGENTS.md` and
   `CONTRIBUTING.md`.
 
+### Fixed
+
+- A desktop window in a remote project sent that project's location to the app's own server, which
+  rejected the unknown directory. The window now reads the app-wide cache without a location, so a
+  session on another OpenCode server works even when that server does not load the plugin.
+
 ## [0.1.0] - 2026-11-08
 
 ### Added
