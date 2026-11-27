@@ -5,6 +5,8 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
 
+## [0.1.1] - 2026-11-27
+
 ### Added
 
 - The README shows screenshots of the pill, the panel, the CLI footer and `/provider-status`; the
